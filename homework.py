@@ -4,7 +4,6 @@ import sys
 import requests
 import telegram
 import time
-import pprint
 
 from http import HTTPStatus
 from dotenv import load_dotenv
@@ -49,10 +48,9 @@ def send_message(bot, message):
         logging.error(f'Ошибка при отправке сообщения {error}')
 
 
-
 def get_api_answer(timestamp):
     """Запрос к API-сервису"""
-    payload = {'from_date': timestamp - 2500000}
+    payload = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
         if response.status_code != HTTPStatus.OK:
@@ -63,6 +61,7 @@ def get_api_answer(timestamp):
         raise Exception
     response = response.json()
     return response
+
 
 def check_response(response):
     """Проверка запроса"""
@@ -105,7 +104,7 @@ def main():
             homework = check_response(response)
             timestamp = response.get('current_date', timestamp)
             if not homework:
-                raise KeyError(f'Статус домашней роботы не обновлен.')
+                raise KeyError('Статус домашней роботы не обновлен.')
             else:
                 homework = check_response(response)[0]
                 status = parse_status(homework)
@@ -115,7 +114,7 @@ def main():
             if message not in error_message:
                 send_message(bot, message)
                 logging.debug('Сообщение отправилось.')
-                if message==message:
+                if message == message:
                     error_message = message
                     logging.error(message)
         finally:
