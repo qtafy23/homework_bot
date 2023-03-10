@@ -52,7 +52,7 @@ def send_message(bot, message):
 
 def get_api_answer(timestamp):
     """Запрос к API-сервису"""
-    payload = {'from_date': timestamp}
+    payload = {'from_date': timestamp - 2500000}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
         if response.status_code != HTTPStatus.OK:
@@ -102,11 +102,12 @@ def main():
     while True:
         try:
             response = get_api_answer(timestamp)
-            homework = check_response(response)[0]
+            homework = check_response(response)
             timestamp = response.get('current_date', timestamp)
             if not homework:
                 raise KeyError(f'Статус домашней роботы не обновлен.')
             else:
+                homework = check_response(response)[0]
                 status = parse_status(homework)
                 send_message(bot, status)
         except Exception as error:
