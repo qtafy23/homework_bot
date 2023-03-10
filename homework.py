@@ -49,7 +49,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    """Запрос к API-сервису"""
+    """Запрос к API-сервису."""
     payload = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
@@ -64,7 +64,7 @@ def get_api_answer(timestamp):
 
 
 def check_response(response):
-    """Проверка запроса"""
+    """Проверка запроса."""
     if not isinstance(response, dict):
         raise TypeError('Ожидался словарь.')
     elif response.get('homeworks') is None:
