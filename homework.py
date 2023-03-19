@@ -1,12 +1,13 @@
 import logging
+import time
 import os
 import sys
+
 import requests
 import telegram
-import time
-
 from http import HTTPStatus
 from dotenv import load_dotenv
+from exceptions import HomeworkWithoutStatus
 
 load_dotenv()
 
@@ -44,7 +45,7 @@ def send_message(bot, message):
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug(f'Успешная отправка сообщения {message}')
-    except Exception as error:
+    except telegram.error.TelegramError as error:
         logging.error(f'Ошибка при отправке сообщения {error}')
 
 
@@ -55,10 +56,10 @@ def get_api_answer(timestamp):
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
         if response.status_code != HTTPStatus.OK:
             logging.error('Код ответа не ОК.')
-            raise Exception
-    except Exception as error:
+            raise requests.exceptions.HTTPError
+    except requests.RequestException as error:
         logging.error(error)
-        raise Exception
+        raise error('Something wrong')
     response = response.json()
     return response
 
@@ -79,9 +80,9 @@ def check_response(response):
 def parse_status(homework):
     """Проверка статуса."""
     status = homework.get('status')
-    if status not in HOMEWORK_VERDICTS or status is None:
+    if status not in HOMEWORK_VERDICTS:
         logging.error('Работа не имеет статуса')
-        raise KeyError('Работа не имеет статуса')
+        raise HomeworkWithoutStatus('Работа не имеет статуса')
     homework_name = homework.get('homework_name')
     if homework_name is None:
         logging.error('Список пуст')
@@ -98,28 +99,28 @@ def main():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     error_message = ''
-    while True:
-        try:
-            response = get_api_answer(timestamp)
-            homework = check_response(response)
-            timestamp = response.get('current_date', timestamp)
-            if not homework:
-                raise KeyError('Статус домашней роботы не обновлен.')
-            else:
-                homework = check_response(response)[0]
-                status = parse_status(homework)
-                send_message(bot, status)
-        except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            if message not in error_message:
-                send_message(bot, message)
-                logging.debug('Сообщение отправилось.')
-                if message == message:
-                    error_message = message
-                    logging.error(message)
-        finally:
-            time.sleep(RETRY_PERIOD)
+    try:
+        while True:
+            try:
+                response = get_api_answer(timestamp)
+                homework = check_response(response)
+                timestamp = response.get('current_date', timestamp)
+                if not homework:
+                    raise KeyError('Статус домашней роботы не обновлен.')
+                else:
+                    status = parse_status(homework[0])
+                    send_message(bot, status)
+            except Exception as error:
+                message = f'Сбой в работе программы: {error}'
+                if message != error_message:
+                    send_message(bot, message)
+                    logging.debug('Сообщение отправилось.')
+            finally:
+                time.sleep(RETRY_PERIOD)
+    except KeyboardInterrupt:
+        print('\nЗавершение работы программы.')
 
 
 if __name__ == '__main__':
     main()
+    
