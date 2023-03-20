@@ -110,10 +110,9 @@ def main():
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
             timestamp = response.get('current_date', timestamp)
-            if not homeworks:
+            if not homeworks and message != last_message:
                 message = 'Статус работы не обновлён'
-                if message != last_message:
-                    send_message(bot, message)
+                send_message(bot, message)
             else:
                 message = parse_status(homeworks[0])
                 if message != last_message:
